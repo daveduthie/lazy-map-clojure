@@ -10,18 +10,16 @@
   (getv [a] "Return object, resolving it if delayed."))
 
 (extend-protocol Holder
-  object
-  (getv [a] a)
-  number
-  (getv [a] a)
-  boolean
-  (getv [a] a)
-  string
-  (getv [a] a)
-  nil
-  (getv [a] a)
   Delay
   (getv [a] (force a)))
+
+(defn- getval
+ "Wrapper around `Holder` protocol, so we don't have to extend the protocol to
+  every type we might want to put in a map."
+  [x]
+  (if (satisfies? Holder x)
+    (getv x)
+    x))
 
 ;;; Map Definition
 (deftype LazyMap [contents]
@@ -39,7 +37,7 @@
 
   IIterable
   (-iterator [this]
-    (-iterator (into {} (map (fn [[k v]] [k (getv v)]) contents))))
+    (-iterator (into {} (map (fn [[k v]] [k (getval v)]) contents))))
 
   ICounted
   (-count [_]
@@ -63,9 +61,9 @@
 
   ILookup
   (-lookup [_ k]
-    (getv (-lookup contents k)))
+    (getval (-lookup contents k)))
   (-lookup [_ k not-found]
-    (getv (-lookup contents k not-found)))
+    (getval (-lookup contents k not-found)))
 
   IPrintWithWriter
   (-pr-writer [_ writer opts]
